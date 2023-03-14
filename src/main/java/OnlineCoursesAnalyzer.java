@@ -110,18 +110,64 @@ public class OnlineCoursesAnalyzer {
 
     //4
     public List<String> getCourses(int topK, String by) {
-        return null;
+        if (by.equals("hours")) {
+            return courses.stream()
+                    .sorted(Comparator.comparingDouble(Course::getTotalHours).reversed().thenComparing(Course::getTitle))
+                    .map(Course::getTitle)
+                    .distinct()
+                    .limit(topK)
+                    .toList();
+        } else {
+            return courses.stream()
+                    .sorted(Comparator.comparingInt(Course::getParticipants).reversed().thenComparing(Course::getTitle))
+                    .map(Course::getTitle)
+                    .distinct()
+                    .limit(topK)
+                    .toList();
+        }
     }
 
     //5
     public List<String> searchCourses(String courseSubject, double percentAudited, double totalCourseHours) {
-        return null;
+        return courses.stream()
+                .filter(course -> course.getSubject().toLowerCase().contains(courseSubject.toLowerCase())
+                        && course.getPercentAudited() >= percentAudited
+                        && course.getTotalHours() <= totalCourseHours)
+                .sorted(Comparator.comparing(Course::getTitle))
+                .map(Course::getTitle)
+                .distinct()
+                .toList();
     }
 
     //6
     public List<String> recommendCourses(int age, int gender, int isBachelorOrHigher) {
-        return null;
+        Map<String, Double> averageAge = courses.stream()
+                .collect(Collectors.groupingBy(Course::getNumber, Collectors.averagingDouble(Course::getMedianAge)));
+        Map<String, Double> averageMale = courses.stream()
+                .collect(Collectors.groupingBy(Course::getNumber, Collectors.averagingDouble(Course::getPercentMale)));
+        Map<String, Double> averageDegree = courses.stream()
+                .collect(Collectors.groupingBy(Course::getNumber, Collectors.averagingDouble(Course::getPercentDegree)));
+
+        Map<String, Double> similarities = new LinkedHashMap<>();
+        averageAge.forEach((k, v) -> {
+            Double similarity = Math.pow(age - averageAge.get(k).intValue(), 2) + Math.pow(gender * 100 - averageMale.get(k), 2) + Math.pow(isBachelorOrHigher * 100 - averageDegree.get(k), 2);
+            similarities.put(k, similarity);
+        });
+
+        List<String> result = similarities.entrySet().stream()
+                .sorted(Comparator.comparingDouble(Map.Entry::getValue))
+                .map(courseNumber -> courses.stream()
+                        .filter(course -> course.getNumber().equals(courseNumber.getKey()))
+                        .sorted(Comparator.comparing(Course::getLaunchDate).reversed())
+                        .map(Course::getTitle)
+                        .findFirst()
+                        .orElse(""))
+                .distinct()
+                .limit(10)
+                .toList();
+        return result;
     }
+
 }
 
 class Course {
