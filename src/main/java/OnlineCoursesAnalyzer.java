@@ -155,19 +155,39 @@ public class OnlineCoursesAnalyzer {
         });
 
         List<String> result = similarities.entrySet().stream()
-                .sorted(Comparator.comparingDouble(Map.Entry::getValue))
-                .map(courseNumber -> courses.stream()
-                        .filter(course -> course.getNumber().equals(courseNumber.getKey()))
+                .map(entry -> new Tuple(entry.getKey(), entry.getValue(), courses.stream()
+                        .filter(course -> course.getNumber().equals(entry.getKey()))
                         .sorted(Comparator.comparing(Course::getLaunchDate).reversed())
                         .map(Course::getTitle)
                         .findFirst()
-                        .orElse(""))
+                        .orElse("")))
+                .sorted(Comparator.comparing(Tuple::getValue).thenComparing(Tuple::getName))
+                .map(Tuple::getName)
                 .distinct()
                 .limit(10)
                 .toList();
         return result;
     }
+}
 
+class Tuple {
+    private final String key;
+    private final Double value;
+    private final String name;
+
+    public Tuple(String key, Double value, String name) {
+        this.key = key;
+        this.value = value;
+        this.name = name;
+    }
+
+    public Double getValue() {
+        return value;
+    }
+
+    public String getName() {
+        return name;
+    }
 }
 
 class Course {
